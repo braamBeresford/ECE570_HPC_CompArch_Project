@@ -1,0 +1,1 @@
+fatal: could not parse argument `TABLESIZE' of option `-bpred:bimod'
