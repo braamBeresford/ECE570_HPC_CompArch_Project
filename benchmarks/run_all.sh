@@ -18,11 +18,11 @@
 # done
 
 
-for TABLESIZE in 256 4096
+for TABLESIZE in 256 512 1024 2048 4096
 do
- ./sim-outorder -config ../config/default.cfg -bpred:trimod $TABLESIZE  cc1.alpha -O 1stmt.i 2> outputs/trimod_gcc_$TABLESIZE.txt &
- ./sim-outorder -config ../config/default.cfg -bpred:trimod $TABLESIZE  anagram.alpha words < anagram.in > OUT 2> outputs/trimod_anagram_$TABLESIZE.txt &
- ./sim-outorder -config ../config/default.cfg -bpred:trimod $TABLESIZE  go.alpha  50 9 2stone9.in > OUT 2> outputs/trimod_go_$TABLESIZE.txt &
+ ./sim-outorder -config ../config/default.cfg -bpred trimod -bpred:trimod $TABLESIZE  cc1.alpha -O 1stmt.i 2> outputs/trimod_gcc_$TABLESIZE.txt &
+ ./sim-outorder -config ../config/default.cfg -bpred trimod -bpred:trimod $TABLESIZE  anagram.alpha words < anagram.in > OUT 2> outputs/trimod_anagram_$TABLESIZE.txt &
+ ./sim-outorder -config ../config/default.cfg -bpred trimod -bpred:trimod $TABLESIZE  go.alpha  50 9 2stone9.in > OUT 2> outputs/trimod_go_$TABLESIZE.txt &
 done
 
 

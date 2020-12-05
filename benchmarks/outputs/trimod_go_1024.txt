@@ -6,7 +6,7 @@ entity, or for any commercial purpose, without the prior written permission
 of SimpleScalar, LLC (info@simplescalar.com).
 
 warning: section `.comment' ignored...
-sim: command line: ./sim-outorder -config ../config/default.cfg -bpred trimod -bpred:trimod 4096 go.alpha 50 9 2stone9.in 
+sim: command line: ./sim-outorder -config ../config/default.cfg -bpred trimod -bpred:trimod 1024 go.alpha 50 9 2stone9.in 
 
 sim: simulation started @ Sat Dec  5 14:27:11 2020, options follow:
 
@@ -34,8 +34,8 @@ latency of all pipeline operations.
 -fetch:mplat                3 # extra branch mis-prediction latency
 -fetch:speed                1 # speed of front-end of machine relative to execution core
 -bpred                 trimod # branch predictor type {nottaken|taken|perfect|bimod|2lev|comb|trimod}
--bpred:bimod     4096 # bimodal predictor config (<table size>)
--bpred:trimod    4096 # trimodal predictor config (<table size>)
+-bpred:bimod     1024 # bimodal predictor config (<table size>)
+-bpred:trimod    1024 # trimodal predictor config (<table size>)
 -bpred:2lev      1 1024 8 0 # 2-level predictor config (<l1size> <l2size> <hist_size> <xor>)
 -bpred:comb      1024 # combining predictor config (<meta_table_size>)
 -bpred:ras                  8 # return address stack size (0 for no return stack)
