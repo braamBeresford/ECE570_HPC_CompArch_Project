@@ -621,12 +621,18 @@ void sim_reg_options(struct opt_odb_t *odb)
                "  Predictor `comb' combines a bimodal and a 2-level predictor.\n");
 
   opt_reg_string(odb, "-bpred",
-                 "branch predictor type {nottaken|taken|perfect|bimod|2lev|comb}",
+                 "branch predictor type {nottaken|taken|perfect|bimod|2lev|comb|3bit}",
                  &pred_type, /* default */ "bimod",
                  /* print */ TRUE, /* format */ NULL);
 
   opt_reg_int_list(odb, "-bpred:bimod",
                    "bimodal predictor config (<table size>)",
+                   bimod_config, bimod_nelt, &bimod_nelt,
+                   /* default */ bimod_config,
+                   /* print */ TRUE, /* format */ NULL, /* !accrue */ FALSE);
+
+  opt_reg_int_list(odb, "-bpred:3bit",
+                   "3bit predictor config (<table size>)",
                    bimod_config, bimod_nelt, &bimod_nelt,
                    /* default */ bimod_config,
                    /* print */ TRUE, /* format */ NULL, /* !accrue */ FALSE);
@@ -637,6 +643,7 @@ void sim_reg_options(struct opt_odb_t *odb)
                    twolev_config, twolev_nelt, &twolev_nelt,
                    /* default */ twolev_config,
                    /* print */ TRUE, /* format */ NULL, /* !accrue */ FALSE);
+
 
   opt_reg_int_list(odb, "-bpred:comb",
                    "combining predictor config (<meta_table_size>)",
@@ -888,6 +895,26 @@ void sim_check_options(struct opt_odb_t *odb, /* options database */
 
     /* bimodal predictor, bpred_create() checks BTB_SIZE */
     pred = bpred_create(BPred2bit,
+                        /* bimod table size */ bimod_config[0],
+                        /* 2lev l1 size */ 0,
+                        /* 2lev l2 size */ 0,
+                        /* meta table size */ 0,
+                        /* history reg size */ 0,
+                        /* history xor address */ 0,
+                        /* btb sets */ btb_config[0],
+                        /* btb assoc */ btb_config[1],
+                        /* ret-addr stack size */ ras_size);
+  }
+  else if (!mystricmp(pred_type, "3bit"))
+  {
+    /* bimodal predictor, bpred_create() checks BTB_SIZE */
+    if (bimod_nelt != 1)
+      fatal("bad bimod predictor config (<table_size>)");
+    if (btb_nelt != 2)
+      fatal("bad btb config (<num_sets> <associativity>)");
+
+    /* bimodal predictor, bpred_create() checks BTB_SIZE */
+    pred = bpred_create(BPred3bit,
                         /* bimod table size */ bimod_config[0],
                         /* 2lev l1 size */ 0,
                         /* 2lev l2 size */ 0,

@@ -1,3 +1,10 @@
+3-Bit improvement:
+The 3-Bit predictor acts similarly to the 2-Bit bimodal. The option to run the 
+default 3-Bit (2048 entries) is "-bpred:3bit". Do modify the number of entries 
+by command line add "-bpred:3bit 4096" into the command line or modify the default config. 
+
+
+
 OVERVIEW:
 
 This README file is for the SimpleScalar simulator release 3.0.  This release
