@@ -105,7 +105,6 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
     break;
 
   case BPred2bit:
-  case BPred3bit:
     pred->dirpred.bimod = 
       bpred_dir_create(class, bimod_size, 0, 0, 0);
 
@@ -123,7 +122,6 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
   case BPredComb:
   case BPred2Level:
   case BPred2bit:
-  case BPred3bit:
     {
       int i;
 
@@ -235,7 +233,6 @@ bpred_dir_create (
       break;
     }
 
-//TODO: Why power of 2?
   case BPred2bit:
     if (!l1size || (l1size & (l1size-1)) != 0)
       fatal("2bit table size, `%d', must be non-zero and a power of two", 
@@ -259,34 +256,12 @@ bpred_dir_create (
     /* no other state */
     break;
 
-  // Fill with 3&4 intiial values, weakly taken & weakly not taken
-  case BPred3bit:
-  if (!l1size || (l1size & (l1size-1)) != 0)
-      fatal("3bit table size, `%d', must be non-zero and a power of two", 
-	    l1size);
-    pred_dir->config.bimod.size = l1size;
-    if (!(pred_dir->config.bimod.table =
-	  calloc(l1size, sizeof(unsigned char))))
-      fatal("cannot allocate 3bit storage");
-    /* initialize counters to weakly this-or-that */
-    flipflop = 3;
-    for (cnt = 0; cnt < l1size; cnt++)
-      {
-	pred_dir->config.bimod.table[cnt] = flipflop;
-	flipflop = 7 - flipflop;
-      }
-
-    break;
-  
   default:
     panic("bogus branch direction predictor class");
-  
   }
-
 
   return pred_dir;
 }
-
 
 /* print branch direction predictor configuration */
 void
@@ -307,10 +282,6 @@ bpred_dir_config(
     fprintf(stream, "pred_dir: %s: 2-bit: %d entries, direct-mapped\n",
       name, pred_dir->config.bimod.size);
     break;
-
-  case BPred3bit:
-    fprintf(stream, "pred_dir: %s: 3-bit: %d entries, direct-mapped\n",
-      name, pred_dir->config.bimod.size);
 
   case BPredTaken:
     fprintf(stream, "pred_dir: %s: predict taken\n", name);
@@ -348,13 +319,6 @@ bpred_config(struct bpred_t *pred,	/* branch predictor instance */
     break;
 
   case BPred2bit:
-    bpred_dir_config (pred->dirpred.bimod, "bimod", stream);
-    fprintf(stream, "btb: %d sets x %d associativity", 
-	    pred->btb.sets, pred->btb.assoc);
-    fprintf(stream, "ret_stack: %d entries", pred->retstack.size);
-    break;
-
-  case BPred3bit:
     bpred_dir_config (pred->dirpred.bimod, "bimod", stream);
     fprintf(stream, "btb: %d sets x %d associativity", 
 	    pred->btb.sets, pred->btb.assoc);
@@ -403,9 +367,6 @@ bpred_reg_stats(struct bpred_t *pred,	/* branch predictor instance */
     case BPred2bit:
       name = "bpred_bimod";
       break;
-    case BPred3bit:
-      name = "bpred_3bit";
-      break;
     case BPredTaken:
       name = "bpred_taken";
       break;
@@ -415,7 +376,6 @@ bpred_reg_stats(struct bpred_t *pred,	/* branch predictor instance */
     default:
       panic("bogus branch predictor class");
     }
-
 
   sprintf(buf, "%s.lookups", name);
   stat_reg_counter(sdb, buf, "total number of bpred lookups",
@@ -573,9 +533,6 @@ bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
     case BPred2bit:
       p = &pred_dir->config.bimod.table[BIMOD_HASH(pred_dir, baddr)];
       break;
-    case BPred3bit: //TODO: Finish this 
-      p = &pred_dir->config.bimod.table[BIMOD_HASH(pred_dir, baddr)];
-      break;
     case BPredTaken:
     case BPredNotTaken:
       break;
@@ -624,7 +581,7 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
   switch (pred->class) {
     case BPredComb:
       if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
-	{ 
+	{
 	  char *bimod, *twolev, *meta;
 	  bimod = bpred_dir_lookup (pred->dirpred.bimod, baddr);
 	  twolev = bpred_dir_lookup (pred->dirpred.twolev, baddr);
@@ -652,12 +609,11 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
 	    bpred_dir_lookup (pred->dirpred.twolev, baddr);
 	}
       break;
-    case BPred3bit:
     case BPred2bit:
-      if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND)) /*This is checking for jumps by looking at opcode*/
+      if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
 	{
 	  dir_update_ptr->pdir1 =
-	    bpred_dir_lookup (pred->dirpred.bimod, baddr); /*bped_dir_lookup I think it reads state of FSM and returns address to jmp to*/
+	    bpred_dir_lookup (pred->dirpred.bimod, baddr);
 	}
       break;
     case BPredTaken:
@@ -743,28 +699,18 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
       return (pbtb ? pbtb->target : 1);
     }
 
-  unsigned int threshhold;
-  switch (pred->class)
-  {
-    case BPred3bit:
-      threshhold = 4;
-      break;
-    default:
-      threshhold = 2;
-    break;
-  }
   /* otherwise we have a conditional branch */
   if (pbtb == NULL)
     {
       /* BTB miss -- just return a predicted direction */
-      return ((*(dir_update_ptr->pdir1) >= threshhold)
+      return ((*(dir_update_ptr->pdir1) >= 2)
 	      ? /* taken */ 1
 	      : /* not taken */ 0);
     }
   else
     {
       /* BTB hit, so return target if it's a predicted-taken branch */
-      return ((*(dir_update_ptr->pdir1) >= threshhold)
+      return ((*(dir_update_ptr->pdir1) >= 2)
 	      ? /* taken */ pbtb->target
 	      : /* not taken */ 0);
     }
@@ -965,31 +911,12 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
    * matched-on entry or a victim which was LRU in its set)
    */
 
-
-  //Define state max
-  unsigned int max_state = 0;
-  switch(pred->class){
-    case BPred2bit:
-    case BPred2Level:
-    case BPredComb:
-      max_state = 3;
-    break;
-
-    case BPred3bit:
-      max_state = 7;
-    break;
-
-    default: 
-      panic("bogus predictor class");
-  }
-
-
   /* update state (but not for jumps) */
   if (dir_update_ptr->pdir1)
     {
       if (taken)
 	{
-	  if (*dir_update_ptr->pdir1 < max_state)
+	  if (*dir_update_ptr->pdir1 < 3)
 	    ++*dir_update_ptr->pdir1;
 	}
       else
@@ -1005,7 +932,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
     {
       if (taken)
 	{
-	  if (*dir_update_ptr->pdir2 < max_state)
+	  if (*dir_update_ptr->pdir2 < 3)
 	    ++*dir_update_ptr->pdir2;
 	}
       else
@@ -1024,7 +951,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 	  if (dir_update_ptr->dir.twolev == (unsigned int)taken)
 	    {
 	      /* 2-level predictor was correct */
-	      if (*dir_update_ptr->pmeta < max_state)
+	      if (*dir_update_ptr->pmeta < 3)
 		++*dir_update_ptr->pmeta;
 	    }
 	  else
